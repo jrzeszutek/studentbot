@@ -81,7 +81,7 @@
         "Bye"
     ];
     var config = {
-        botName: 'Duck Duck Go Bot',
+        botName: 'StudentBot',
         inputs: '#humanInput',
         inputCapabilityListing: true,
         engines: [ChatBot.Engines.duckduckgo()],
@@ -90,7 +90,7 @@
         }
     };
     ChatBot.init(config);
-    ChatBot.setBotName("Duck Duck Go Bot");
+    ChatBot.setBotName(config.botName);
     ChatBot.addPattern("^hi$", "response", "Howdy, friend", undefined, "Say 'Hi' to be greeted back.");
     ChatBot.addPattern("^bye$", "response", "See you later buddy", undefined, "Say 'Bye' to end the conversation.");
     ChatBot.addPattern("(?:my name is|I'm|I am) (.*)", "response", "hi $1, thanks for talking to me today", function (matches) {
