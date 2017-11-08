@@ -1,16 +1,45 @@
-const http = require('http');
-const request = require("tinyreq"); // npm i --save tinyreq
+var express = require('express');
+var fs      = require('fs');
+var request = require('request');
+var cheerio = require('cheerio');
+var app     = express();
 
-request("https://new.kt.agh.edu.pl/pl/user/146", function (err, body,response) {
-    var konsultacje;
+app.get('/scrape', function(req, res){
+  // Let's scrape Anchorman 2
+  url = 'http://www.imdb.com/title/tt1229340/';
 
-    if(body.indexOf("konsultacje") > -1) {
-        konsultacje = body.slice(body.indexOf("konsultacje"), body.indexOf("konsultacje")+ 20);//niedziala
-        console.info('----------->',response);
+  request(url, function(error, response, html){
+    if(!error){
+      var $ = cheerio.load(html);
+
+      var title, release, rating;
+      var json = { title : "", release : "", rating : ""};
+
+      $('.title_wrapper').filter(function(){
+        var data = $(this);
+        title = data.children().first().text().trim();
+        release = data.children().last().children().last().text().trim();
+
+        json.title = title;
+        json.release = release;
+      })
+
+      $('.ratingValue').filter(function(){
+        var data = $(this);
+        rating = data.text().trim();
+
+        json.rating = rating;
+      })
     }
-});
 
-http.createServer(function (req, res) {
-    res.writeHead(200, {'Content-Type': 'text/plain'});
+    fs.writeFile('output.json', JSON.stringify(json, null, 4), function(err){
+      console.log('File successfully written! - Check your project directory for the output.json file');
+    })
 
-}).listen(1337, '127.0.0.1');
+    res.send('Check your console!')
+  })
+})
+
+app.listen('8081')
+console.log('Magic happens on port 8081');
+exports = module.exports = app;
