@@ -1,43 +1,65 @@
 var express = require('express');
-var fs      = require('fs');
+var fs = require('fs');
 var request = require('request');
 var cheerio = require('cheerio');
-var app     = express();
+var app = express();
 
-app.get('/scrape', function(req, res){
-  // Let's scrape Anchorman 2
-  url = 'http://www.imdb.com/title/tt1229340/';
+app.get('/studentbot', function (req, res) {
 
-  request(url, function(error, response, html){
-    if(!error){
-      var $ = cheerio.load(html);
 
-      var title, release, rating;
-      var json = { title : "", release : "", rating : ""};
+    // here should be  JSON with urls to all syllabus year for one faculty
+    URL_MAP = {
+        "faculty": {
+            "course": {
+                "year_of_course": "URL"
+            }
+        }
+    };
 
-      $('.title_wrapper').filter(function(){
-        var data = $(this);
-        title = data.children().first().text().trim();
-        release = data.children().last().children().last().text().trim();
+    url = 'https://syllabuskrk.agh.edu.pl/2013-2014/pl/magnesite/study_plans/stacjonarne-teleinformatyka';
 
-        json.title = title;
-        json.release = release;
-      })
+    //here should be JSON with html ID of each course. This information is crutial for later processing scraping of web
 
-      $('.ratingValue').filter(function(){
-        var data = $(this);
-        rating = data.text().trim();
+    request(url, function (error, response, html) {
+        if (!error) {
+            var lectureId, lectureName, ectsCount, lecturesHours, exercisesHours, lectureHref;
 
-        json.rating = rating;
-      })
-    }
+            var $ = cheerio.load(html);
+            var json = {
+                lectureHtmlId: "",
+                lectureId: "",
+                lectureName: "",
+                ectsCount: "",
+                lecturesHours: "",
+                exercisesHours: "",
+                lectureHref: ""
+            };
 
-    fs.writeFile('output.json', JSON.stringify(json, null, 4), function(err){
-      console.log('File successfully written! - Check your project directory for the output.json file');
+            $("tr[data-id='8826']>td:nth-child(2)").filter(function () {
+                var data = $(this);
+                json.lectureName = data.text().trim();
+            })
+
+            $("tr[data-id='8826']>td:nth-child(3)").filter(function () {
+                var data = $(this);
+                json.lecturesHours = data.text().trim();
+            })
+
+            $("tr[data-id='8826']>td:nth-child(5)").filter(function () {
+                var data = $(this);
+                json.exercisesHours = data.text().trim();
+            })
+
+            $("tr[data-id='8826']>td:nth-child(15)").filter(function () {
+                var data = $(this);
+                json.ectsCount = data.text().trim();
+            })
+            console.info('info for PT: ', json)
+        }
+
+        res.send(json)
+        process.exit();
     })
-
-    res.send('Check your console!')
-  })
 })
 
 app.listen('8081')
