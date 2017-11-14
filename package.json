@@ -1,16 +1,30 @@
 {
   "name": "studentbot",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "",
-  "main": "server.js",
-  "author": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon app"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Pabson/studentbot"
+    "url": "git+https://github.com/Pabson/studentbot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Pabson/studentbot/issues"
+  },
+  "homepage": "https://github.com/Pabson/studentbot#readme",
+  "devDependencies": {
+    "nodemon": "^1.12.1"
   },
   "dependencies": {
-    "express": "latest",
-    "cheerio": "latest",
-    "request": "latest"
+    "express": "^4.16.2",
+    "lodash": "^4.17.4",
+    "morgan": "^1.9.0",
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2"
   }
 }
