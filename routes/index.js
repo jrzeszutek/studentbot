@@ -17,7 +17,19 @@ routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	const scrapUrl = `https://www.syllabus.agh.edu.pl/${year}/pl/magnesite/study_plans/${combo}` 
 
-	return res.json({ ...req.params, scrapUrl })
+	rp(scrapUrl)
+		.then(html => {
+			const SC = new SyllaCrap(html)
+			
+			SC.import()
+				.then(collection => {
+					// TODO: zapis do bazy HERE
+					res.json({ collection })
+				})
+		})
+		.catch(err => {
+			// TODO
+		})
 })
 
 module.exports = routes
