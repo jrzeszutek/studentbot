@@ -10,10 +10,9 @@
     </head>
 
     <body class="studentbot-body">
-
         <div id="demo">
             <div id="chatBotCommandDescription"></div>
-            <input id="humanInput" type="text" placeholder="Say something"/>
+            <input id="humanInput" type="text" placeholder="Powiedz cos..."/>
 
             <div class="button" onclick="$('#chatBotCommandDescription').slideToggle();" style="margin-right:10px">Przykladowe
                 pytania
@@ -27,7 +26,6 @@
             </div>
         </div>
 
-
         <script>
             let config = {
                 botName: 'StudentBot',
@@ -40,7 +38,7 @@
             };
             ChatBot.init(config);
             ChatBot.setBotName("StudentBot");
-        //    ChatBot.addPattern("^bye$", "response", "See you later buddy", undefined, "Powiedz  'Do zobaczenia' aby zakonczyc rozmowe");
+            //ChatBot.addPattern("^bye$", "response", "See you later buddy", undefined, "Powiedz  'Do zobaczenia' aby zakonczyc rozmowe");
 
         </script>
     </body>
