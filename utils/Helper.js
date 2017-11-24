@@ -1,5 +1,5 @@
 const _ = require('lodash')
-const UrlMap = require('../config/map')
+const UrlMap = require('../config/map') // to mongoDB config
 
 /**
  * @class Helper

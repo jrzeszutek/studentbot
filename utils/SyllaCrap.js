@@ -1,4 +1,5 @@
 const cheerio = require('cheerio')
+const rp = require('request-promise')
 
 /**
  * @class SyllaCrap
@@ -7,56 +8,90 @@ const cheerio = require('cheerio')
  */
 class SyllaCrap {
 
-	constructor (html) {
-		this.$ = cheerio.load(html)
+	constructor(url, timeStart) {
+		this.url = url
+		this.timeStart = new Date(timeStart)
+		this.subs = []
+		this.queue = []
 	}
 
-	import () {
-		return new Promise((resolve, reject) => {
-			const subs = []
+	start() {
+		rp(this.url)
+			.then(html => {
+				this.$ = cheerio.load(html)
+				console.info('SyllaCrap:: Import in progress... START')
 
-			this.$('tr[data-id]').map((i, element) => {
-				let row = this.$(element)
-				let children = row.children()
-				const retDoc = {}
-
-				children.map((i, child) => {
-					let td = this.$(child)
-					/** TODO: przeniesc do osobnych funkcji */
-					if (i == 1) {
-						retDoc.subjectName = td.text().trim()
-					}
-
-					if (i == 2) {
-						retDoc.lecturesCount = td.text().trim()
-					}
-
-					if (i == 3) {
-						retDoc.classesCount = td.text().trim()
-					}
-
-					if (i == 4) {
-						retDoc.projectClassesCount = td.text().trim()
-					}
-
-					if (i == 14) {
-						retDoc.ECTSCount = td.text().trim()
-					}
-
-					if (i == 15) {
-						let content = td.text().trim()
-						retDoc.isExam = content == '+' ? true : false
-					}
-				})
-
-				retDoc.categoryFlags = this.categoryMapper(row.parent().children().first().text().trim())
-				// console.log(this.categoryMapper(row.parent().children().first().text().trim()))
-
-
-				subs.push(retDoc)
+				this.importMain()
+					.then(() => {
+						let finishTime = new Date()
+						let totalTime = finishTime - this.timeStart
+						console.log(`Total Time of operation: ${Math.floor(totalTime / 1000)} s`)
+						console.log(`Subjects imported number: ${this.subs.length}`)
+						// TODO: save to database STATUS & SUBJECTS
+					})
 			})
+	}
 
-			return resolve(subs)
+	importMain () {
+		return new Promise((resolve, reject) => {
+			const rows = this.$('tr[data-id]')
+			console.info(`SyllaCrap::importMain:: ${rows.length} subjects found`)
+
+			for (let i = 0; i < rows.length; i++) {
+				this.queue.push(new Promise(finish => {
+					const row = this.$(rows[i])
+					const children = row.children()
+					const doc = {}
+
+					children.map((i, child) => {
+						const td = this.$(child)
+
+						switch (i) {
+							case 1:
+								doc.subjectName = td.text().trim()
+								doc.detailUrl = `https://www.syllabus.agh.edu.pl${td.find('a').attr('href')}`
+								break
+							case 2:
+								doc.lecturesCount = td.text().trim()
+								break
+							case 3:
+								doc.classesCount = td.text().trim()
+								break
+							case 4:
+								doc.projectClassesCount = td.text().trim()
+								break
+							case 14:
+								doc.ECTSCount = td.text().trim()
+								break
+							case 15:
+								let content = td.text().trim()
+								doc.isExam = content == '+' ? true : false
+								break
+						}
+					})
+
+					doc.categoryFlags = this.categoryMapper(row.parent().children().first().text().trim())
+
+					// TODO: osobna funkcja
+					rp(doc.detailUrl)
+						.then(dtHtml => {
+							/** dt = detail */
+							const dt = cheerio.load(dtHtml)
+							doc.detailPresent = true
+							return finish(doc)
+						})
+						.catch(err => {
+							console.error(err)
+							return finish({})
+						})
+				}))
+			}
+
+			Promise.all(this.queue)
+				.then(coll => {
+					this.subs = coll
+					return resolve()
+				})
 		})
 	}
 
@@ -73,12 +108,12 @@ class SyllaCrap {
 			flags.push('humanistic')
 			flags.push('elective')
 		}
-console.log(flags)
+
 		return flags
 	}
 
 	get cheerio () {
-		return this.$
+		return this.$ || {}
 	}
 }
 
