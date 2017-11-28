@@ -77,7 +77,32 @@ class SyllaCrap {
 						.then(dtHtml => {
 							/** dt = detail */
 							const dt = cheerio.load(dtHtml)
-							doc.detailPresent = true
+							doc.detailCrawled = true
+
+							const addInfos = dt('div.label').find('span')
+							addInfos.map((i, child) => {
+								let label = dt(child).text().trim()
+
+								if (label && label.indexOf('Osoba odpowiedzialna') > - 1) {
+									let attendant = dt(child).parent().siblings('.element-wrapper').children().find('.content').text().trim()
+									let attendantTest = attendant.match(this.leaderRegexp)
+
+									if (!attendantTest) {
+										doc.subjectAttendant = {}
+									} else {
+										doc.subjectAttendant = {
+											academicTitle: attendantTest[1] || '',
+											fullName: attendantTest[2] || '',
+											email: attendantTest[3] || ''
+										}
+										console.log(doc.subjectAttendant)
+									}
+								} /*else if (label && label.indexOf('Osoby prowadzące') > -1) {
+									let leaders = dt(child).parent().siblings('.element-wrapper').children().find('.content').text().trim()
+									console.log(leaders)
+								}*/
+							})
+
 							return finish(doc)
 						})
 						.catch(err => {
@@ -110,6 +135,10 @@ class SyllaCrap {
 		}
 
 		return flags
+	}
+
+	get leaderRegexp () {
+		return /(?:([\wż\. ]+)\s+)?([\wąężźćóńł]+ [\wąężźćóńł]+)[\n\s]+\(([\w\.]+\@[\w\.]+)\)/
 	}
 
 	get cheerio () {
