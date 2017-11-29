@@ -17,7 +17,7 @@ routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	/** Start import and end request */
 	let timeStart = new Date().toISOString()
-	const SC = new SyllaCrap(scrapUrl, timeStart)
+	const SC = new SyllaCrap(scrapUrl, req.path, timeStart, year, req.params.faculty)
 	SC.start()
 
 	return res.json({

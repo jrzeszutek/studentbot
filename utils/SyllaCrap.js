@@ -1,5 +1,6 @@
 const cheerio = require('cheerio')
 const rp = require('request-promise')
+const mongo = require('../config/mongo')
 
 /**
  * @class SyllaCrap
@@ -8,142 +9,228 @@ const rp = require('request-promise')
  */
 class SyllaCrap {
 
-	constructor(url, timeStart) {
-		this.url = url
-		this.timeStart = new Date(timeStart)
-		this.subs = []
-		this.queue = []
-	}
+    constructor(url, originalUrl, timeStart, year, faculty) {
+        this.url = url
+        this.originalUrl = originalUrl
+        this.faculty = faculty
+        this.timeStart = new Date(timeStart)
+        this.year = year
+        this.subs = []
+        this.errorsCount = 0
+        this.status = 'IN PROGRESS'
+    }
 
-	start() {
-		rp(this.url)
-			.then(html => {
-				this.$ = cheerio.load(html)
-				console.info('SyllaCrap:: Import in progress... START')
+    async start() {
+        const db = await mongo()
+        await this.saveFirstStatus(db)
 
-				this.importMain()
-					.then(() => {
-						let finishTime = new Date()
-						let totalTime = finishTime - this.timeStart
-						console.log(`Total Time of operation: ${Math.floor(totalTime / 1000)} s`)
-						console.log(`Subjects imported number: ${this.subs.length}`)
-						// TODO: save to database STATUS & SUBJECTS
-					})
-			})
-	}
+        const html = await rp(this.url)
 
-	importMain () {
-		return new Promise((resolve, reject) => {
-			const rows = this.$('tr[data-id]')
-			console.info(`SyllaCrap::importMain:: ${rows.length} subjects found`)
+        this.$ = cheerio.load(html)
+        console.info('\t[Import START]')
 
-			for (let i = 0; i < rows.length; i++) {
-				this.queue.push(new Promise(finish => {
-					const row = this.$(rows[i])
-					const children = row.children()
-					const doc = {}
+        await this.importMain()
 
-					children.map((i, child) => {
-						const td = this.$(child)
+        console.info('\t[Import END]')
 
-						switch (i) {
-							case 1:
-								doc.subjectName = td.text().trim()
-								doc.detailUrl = `https://www.syllabus.agh.edu.pl${td.find('a').attr('href')}`
-								break
-							case 2:
-								doc.lecturesCount = td.text().trim()
-								break
-							case 3:
-								doc.classesCount = td.text().trim()
-								break
-							case 4:
-								doc.projectClassesCount = td.text().trim()
-								break
-							case 14:
-								doc.ECTSCount = td.text().trim()
-								break
-							case 15:
-								let content = td.text().trim()
-								doc.isExam = content == '+' ? true : false
-								break
-						}
-					})
+        let insertResult;
 
-					doc.categoryFlags = this.categoryMapper(row.parent().children().first().text().trim())
+        try {
+            insertResult = await db.collection('subjects').insertMany(this.subs)
+            console.info(`[i] Subjects imported to database: ${insertResult.insertedCount}`)
+        } catch (e) {
+            this.errorsCount++;
+            console.info(`[i] Import aborted. Probably duplicated entries or internal error`)
+        }
 
-					// TODO: osobna funkcja
-					rp(doc.detailUrl)
-						.then(dtHtml => {
-							/** dt = detail */
-							const dt = cheerio.load(dtHtml)
-							doc.detailCrawled = true
+        const finishTime = new Date()
+        const totalTime = finishTime - this.timeStart
 
-							const addInfos = dt('div.label').find('span')
-							addInfos.map((i, child) => {
-								let label = dt(child).text().trim()
+        console.info(`[i] Total Time of operation: ${Math.floor(totalTime / 1000)} s`)
+        console.info(`[x] Total errors number: ${this.errorsCount}`)
 
-								if (label && label.indexOf('Osoba odpowiedzialna') > - 1) {
-									let attendant = dt(child).parent().siblings('.element-wrapper').children().find('.content').text().trim()
-									let attendantTest = attendant.match(this.leaderRegexp)
+        console.info('\t[OPERATION END]')
 
-									if (!attendantTest) {
-										doc.subjectAttendant = {}
-									} else {
-										doc.subjectAttendant = {
-											academicTitle: attendantTest[1] || '',
-											fullName: attendantTest[2] || '',
-											email: attendantTest[3] || ''
-										}
-										console.log(doc.subjectAttendant)
-									}
-								} /*else if (label && label.indexOf('Osoby prowadzące') > -1) {
-									let leaders = dt(child).parent().siblings('.element-wrapper').children().find('.content').text().trim()
-									console.log(leaders)
-								}*/
-							})
+        await this.saveFinishStatus(totalTime, db)
+        db.close()
 
-							return finish(doc)
-						})
-						.catch(err => {
-							console.error(err)
-							return finish({})
-						})
-				}))
-			}
+        return
+    }
 
-			Promise.all(this.queue)
-				.then(coll => {
-					this.subs = coll
-					return resolve()
-				})
-		})
-	}
+    async importMain() {
+        const rows = this.$('tr[data-id]')
+        console.info(`[i] SyllaCrap::importMain:: ${rows.length} subjects found`)
 
-	categoryMapper (raw) {
-		const flags = []
-		const test = raw.toLowerCase()
+        for (let i = 0; i < rows.length; i++) {
+            const doc = await this.prepareDoc(rows[i])
+            this.subs.push(doc)
+        }
+    }
 
-		if (/obieraln/.test(test)) {
-			flags.push('elective')
-		} else if (/obce/.test(test)) {
-			flags.push('language')
-			flags.push('elective')
-		} else if (/human/.test(test)) {
-			flags.push('humanistic')
-			flags.push('elective')
-		}
+    async prepareDoc(singleRow) {
+        const row = this.$(singleRow)
+        const children = row.children()
+        const doc = {}
 
-		return flags
-	}
+        children.map((i, child) => {
+            const td = this.$(child)
 
-	get leaderRegexp () {
-		return /(?:([\wż\. ]+)\s+)?([\wąężźćóńł]+ [\wąężźćóńł]+)[\n\s]+\(([\w\.]+\@[\w\.]+)\)/
-	}
+            switch (i) {
+                case 1:
+                    doc.subjectName = td.text().trim()
+                    doc.detailUrl = `https://www.syllabus.agh.edu.pl${td.find('a').attr('href')}`
+                    break
+                case 2:
+                    doc.lecturesCount = td.text().trim()
+                    break
+                case 3:
+                    doc.classesCount = td.text().trim()
+                    break
+                case 4:
+                    doc.labClassesCount = td.text().trim()
+                    break
+                case 5:
+                    doc.projectClassesCount = td.text().trim()
+                    break
+                case 14:
+                    doc.ECTSCount = td.text().trim()
+                    break
+                case 15:
+                    let content = td.text().trim()
+                    doc.isExam = content == '+' ? true : false
+                    break
+            }
+        })
 
-	get cheerio () {
-		return this.$ || {}
-	}
+        doc.categoryFlags = this.categoryMapper(row.parent().children().first().text().trim())
+
+        return await this.mapDetail(doc)
+    }
+
+    async mapDetail(doc) {
+        let dtHtml;
+
+        try {
+            dtHtml = await rp(doc.detailUrl)
+        } catch (e) {
+            console.error(`[Error] For URL: ${doc.detailUrl} :\n\nerr.message`)
+            this.errors++;
+            return doc
+        }
+
+        const dt = cheerio.load(dtHtml)
+
+        const addInfos = dt('div.label').find('span')
+
+        addInfos.map((i, child) => {
+            const label = dt(child).text().trim()
+
+            if (label && label.includes('Osoba odpowiedzialna')) {
+                const attendant = this.getTextFromDetail(dt, child)
+                const attendantTest = attendant.match(this.leaderRegexp)
+
+                if (!attendantTest) {
+                    doc.attendant = {}
+                } else {
+                    doc.attendant = {
+                        academicTitle: attendantTest[1] || '',
+                        fullName: attendantTest[2] || '',
+                        email: attendantTest[3] || ''
+                    }
+                }
+            } else if (label && label.includes('Język wykładowy')) {
+                const lang = this.getTextFromDetail(dt, child)
+                doc.courseLanguage = (lang && typeof lang == 'string') ? lang.toLowerCase() : ''
+            } else if (label && label.includes('Semestr')) {
+                doc.semesterNumber = this.getTextFromDetail(dt, child)
+            } else if (label && label.includes('Kierunek')) {
+                doc.facultyName = this.getTextFromDetail(dt, child)
+            } else if (label && label.includes('Poziom')) {
+                const studiesLevel = this.getTextFromDetail(dt, child)
+                doc.studiesLevel = this.getStudiesLevel(studiesLevel)
+            } else if (label && label.includes('Forma i tryb')) {
+                const type = this.getTextFromDetail(dt, child)
+                doc.studiesType = (type && typeof type == 'string') ? type.toLowerCase() : ''
+            }
+        })
+
+        doc.moduleDescription = this.getDescription(dt)
+        doc.gradeLevel = this.year
+
+        return doc
+    }
+
+    async saveFirstStatus(db) {
+        const statusObj = {
+            status: this.status,
+            duration: '',
+            url: this.originalUrl,
+            faculty: this.faculty,
+            timeStart: this.timeStart,
+        }
+
+        await db.collection('statuses').insertOne(statusObj)
+
+        return
+    }
+
+    async saveFinishStatus(time, db) {
+        this.status = (this.errorsCount > 0) ? 'ERROR' : 'SUCCESS'
+
+        const updateResult = await db.collection('statuses').updateOne({
+            "faculty": this.faculty,
+            "timeStart": this.timeStart
+        }, {
+            $set: {
+                "status": this.status,
+                "duration": time
+            }
+        })
+
+        return
+    }
+
+    categoryMapper(raw) {
+        const flags = []
+        const test = raw.toLowerCase()
+
+        if (/obieraln/.test(test)) {
+            flags.push('elective')
+        } else if (/obce/.test(test)) {
+            flags.push('language')
+        } else if (/humanistyczn/.test(test)) {
+            flags.push('humanistic')
+        }
+
+        return flags
+    }
+
+    getDescription(dt) {
+        const legend = dt('legend').filter(function() {
+            return dt(this).text().trim().includes('charakterystyka modułu')
+        })
+        const desc = dt(legend).siblings('.info-group-row').children().find('.content').text().trim()
+
+        return (desc && desc.length > 1) ? desc : null
+    }
+
+    getTextFromDetail(dt, child) {
+        return dt(child).parent().siblings('.element-wrapper').children().find('.content').text().trim()
+    }
+
+    getStudiesLevel(text) {
+        const match = text.match(/\w+\s(I{1,2})\s\w+/)
+
+        return !match ? null : match[1]
+    }
+
+    get leaderRegexp() {
+        return /(?:([\wż\. \,]+)\s+)?([\wąężźćóńł\-]+ [\wąężźćóńł\-]+)[\n\s]+\(([\w\.]+\@[\w\.]+)\)/
+    }
+
+    get cheerio() {
+        return this.$ || {}
+    }
 }
 
 module.exports = SyllaCrap
