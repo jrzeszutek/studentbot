@@ -1,8 +1,6 @@
 const { Router } = require('express')
-const rp = require('request-promise')
 const Helper = require('../utils/Helper')
 const SyllaCrap = require('../utils/SyllaCrap')
-const UrlMap = require('../config/map')
 
 const routes = Router()
 
@@ -17,7 +15,17 @@ routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	const scrapUrl = `https://www.syllabus.agh.edu.pl/${year}/pl/magnesite/study_plans/${combo}` 
 
-	return res.json({ ...req.params, scrapUrl })
+	/** Start import and end request */
+	let timeStart = new Date().toISOString()
+	const SC = new SyllaCrap(scrapUrl, req.path, timeStart, year, req.params.faculty)
+	SC.start()
+
+	return res.json({
+		scrapUrl,
+		checkUrl: '/successLog',
+		timeStart,
+		status: 'STARTED',
+	})
 })
 
 module.exports = routes

@@ -21,8 +21,10 @@
     "nodemon": "^1.12.1"
   },
   "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
     "express": "^4.16.2",
     "lodash": "^4.17.4",
+    "mongodb": "^2.2.33",
     "morgan": "^1.9.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2"
