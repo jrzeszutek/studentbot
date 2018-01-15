@@ -1,84 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
+<%- include('partials/header', {showButtons: true}) %>
+<div class="container">
+  <div class="alert alert-dismissible alert-warning">
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+    <h4 class="alert-heading">Warning!</h4>
+    <p class="mb-0">
+      You have to
+      <a href="/log" class="alert-link">refresh this page</a> in order to see updates.
+    </p>
+  </div>
+  <h1>StudentBot
+    <small class="text-muted">imports statuses</small>
+  </h1>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>StudentBot - Syllabus Importer Logs</title>
-
-  <link rel="stylesheet" href="bootstrap/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="main.css" />
-</head>
-
-<body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <a class="navbar-brand" href="#">StudentBot</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarColor02" aria-controls="navbarColor02"
-      aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-
-    <div class="collapse navbar-collapse" id="navbarColor02">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="/log">Refresh
-            <span class="sr-only">(current)</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#imports">Run Imports</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#map">Add New</a>
-        </li>
-      </ul>
-    </div>
-  </nav>
-  <div class="container">
-    <div class="alert alert-dismissible alert-warning">
-      <button type="button" class="close" data-dismiss="alert">&times;</button>
-      <h4 class="alert-heading">Warning!</h4>
-      <p class="mb-0">
-        You have to
-        <a href="/log" class="alert-link">refresh this page</a> in order to see updates.
-      </p>
-    </div>
-    <h1>StudentBot
-      <small class="text-muted">imports statuses</small>
-    </h1>
-
-    <table class="table table-striped table-hover table-bordered">
-      <thead class="thead-dark">
+  <table class="table table-striped table-hover table-bordered">
+    <thead class="thead-dark">
+      <tr>
+        <th>#</th>
+        <th>Start Time</th>
+        <th>Faculty</th>
+        <th>Requested Url</th>
+        <th>Duration [s]</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% docs.forEach(function (status, index) { %>
         <tr>
-          <th>#</th>
-          <th>Start Time</th>
-          <th>Faculty</th>
-          <th>Requested Url</th>
-          <th>Duration</th>
-          <th>Status</th>
+          <td><%= index + 1 %></td>
+          <td><%= status.timeStart.toISOString() %></td>
+          <td><%= status.faculty %></td>
+          <td><%= status.url %></td>
+          <td><%= (status.duration / 60).toFixed(2) %></td>
+          <td><%= status.status %></td>
         </tr>
-      </thead>
-      <tbody>
-        <% docs.forEach(function (status, index) { %>
-          <tr>
-            <td><%= index + 1 %></td>
-            <td><%= status.startTime %></td>
-            <td><%= status.faculty %></td>
-            <td><%= status.url %></td>
-            <td><%= status.duration %></td>
-            <td><%= status.status %></td>
-          </tr>
-        <% }); %>
-      </tbody>
-    </table>
-  </div>
-  <div class="jumbotron">
-    <pre>
-    </pre>
-  </div>
-  <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-  <script src="bootstrap/js/bootstrap.min.js"></script>
-</body>
-
-</html>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<%- include('partials/footer') %>

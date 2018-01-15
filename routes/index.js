@@ -5,6 +5,21 @@ const mongo = require('../config/mongo')
 
 const routes = Router()
 
+routes.get('/', (req, res) => {
+	return res.render('index', { showNav: false })
+})
+
+routes.get('/admin', async function (req, res) {
+	let db = await mongo();
+	db.collection('statuses').find().toArray((err, docs) => {
+		if (!err) {
+			return res.render('logs', { docs })
+		} else {
+			return res.render('logs', { docs: [] })
+		}
+	})
+})
+
 routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	const year = Helper.getYear(req.params.year)
@@ -23,24 +38,19 @@ routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	return res.json({
 		scrapUrl,
-		checkUrl: '/log',
+		checkUrl: '/admin',
 		timeStart,
 		status: 'STARTED',
 	})
 })
 
-routes.get('/log', async function (req, res) {
-	const db = await mongo()
-	db.collection('statuses').find().toArray((err, docs) => {
-		if (!err) {
-			console.log(JSON.stringify(docs))
-			return res.render('logs', { docs })
-		} else {
-			return res.render('logs', { docs: [] })			
-		}
-		
-	})
-
+/**
+ * Get all subjects from database
+ */
+routes.get('/api/subject', async function (req, res) {
+	let db = await mongo();
+	const subs = await db.collection('subjects').find().toArray()
+	res.json({ docs: subs })
 })
 
 module.exports = routes
