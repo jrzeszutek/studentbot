@@ -6,7 +6,7 @@ const routes = require('./routes')
 const app = express()
 
 /** Config **/
-app.set('port', 3000)
+app.set('port', process.env.PORT || 3000)
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'templates'))
 app.use(logger('dev'))
