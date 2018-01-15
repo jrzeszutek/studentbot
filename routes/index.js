@@ -1,8 +1,24 @@
 const { Router } = require('express')
 const Helper = require('../utils/Helper')
 const SyllaCrap = require('../utils/SyllaCrap')
+const mongo = require('../config/mongo')
 
 const routes = Router()
+
+routes.get('/', (req, res) => {
+	return res.render('index', { showNav: false })
+})
+
+routes.get('/admin', async function (req, res) {
+	let db = await mongo();
+	db.collection('statuses').find().toArray((err, docs) => {
+		if (!err) {
+			return res.render('logs', { docs })
+		} else {
+			return res.render('logs', { docs: [] })
+		}
+	})
+})
 
 routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
@@ -22,10 +38,19 @@ routes.get('/import/:year/:faculty/:degree', (req, res) => {
 
 	return res.json({
 		scrapUrl,
-		checkUrl: '/successLog',
+		checkUrl: '/admin',
 		timeStart,
 		status: 'STARTED',
 	})
+})
+
+/**
+ * Get all subjects from database
+ */
+routes.get('/api/subject', async function (req, res) {
+	let db = await mongo();
+	const subs = await db.collection('subjects').find().toArray()
+	res.json({ docs: subs })
 })
 
 module.exports = routes
