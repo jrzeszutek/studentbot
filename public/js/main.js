@@ -17,7 +17,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
      * ChatBot - StudentBot
      */
     var studentEngine = function () {
-        var capabilities = [];
+        var capabilities = ["Informacje o przedmiocie: 'Co wiesz o przedmiocie [nazwa]?'"];
         var subPattern = /(?:(?:przedmiot|przedmiocie)\s)([A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ\s]*)\??$/i;
 
         return {
