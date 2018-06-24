@@ -28,13 +28,39 @@ app.controller('chatbotCtrl', function ($scope, $http) {
         ];
         var subPattern = /(?:(?:przedmio[a-z]*)\s)([A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ\s]*)\??$/i;    // Nazwa przedmiotu
         var semesterPattern = /(?:(?:semestr[a-z]*)\s)(\d{1,2})/i;                          // Numer semestru
-        var whoPattern = /kto\s[a-z]*pr[a-z]+dz[a-z]*/i;                                    // Kto prowadzi
-        var ectsPattern = /ile\s*[a-z]*\spu[a-z]+kt[a-zżźćńółęąś]*/i;                       // Ile jest punktow
-        var examsNumberPattern = /ile\sjest\seg[a-z]+in/i;                                  // Ile jest egzamin
-        var isExamPattern = /Czy\sjest\seg[a-z]+in/i;                                       // Czy jest egzamin
-        var labsPattern = /ile\sgo[a-z]+\sla[a-z]+or[a-zżźćńółęąś]+/i;                      // Ile godzin laboratorium
-        var lecPattern = /ile\sgo[a-z]+\swy[a-zżźćńółęąś]+ad[a-zżźćńółęąś]+/i;              // Ile godzin wykładów
-        var exPattern = /ile\sgo[a-z]+\sćw[a-z]+e[a-zżźćńółęąś]*/i;                         // Ile godzin ćwiczeń
+        var whoPattern = [                                              // Kto prowadzi
+            /kto\s[a-z]*pr[a-z]+dz[a-z]*/i,
+            /kto\sjest\spr[a-z]+dz[a-zżźćńółęąś]+/i
+        ];                                                                                  
+        var ectsPattern = [                                             // Ile jest punktow
+            /ile\s*[a-z]*\spu[a-z]+kt[a-zżźćńółęąś]*/i,
+            /jak\s[a-z]+\s*[a-z]*\spu[a-z]+kt[a-zżźćńółęąś]*/i,
+            /jak\s[a-z]+\s*[a-z]*\sECTS/i,
+            /ile\sECTS/i
+        ];                       
+        var examsNumberPattern = [                                      // Ile jest egzamin
+            /ile\sjest\seg[a-z]+in/i,
+            /ile\seg[a-z]+in/i
+        ];              
+        var isExamPattern = /Czy\sjest\seg[a-z]+in/i;                   // Czy jest egzamin
+        var labsPattern = [                                             // Ile godzin laboratorium
+            /ile\sgo[a-z]+\sla[a-z]+or[a-zżźćńółęąś]+/i,
+            /ile\sjest\sgo[a-z]+\sla[a-z]+or[a-zżźćńółęąś]+/i,
+            /ile\sla[a-z]+or[a-zżźćńółęąś]+/i,
+            /ile\sjest\sla[a-z]+or[a-zżźćńółęąś]+/i
+        ];                      
+        var lecPattern = [                                              // Ile godzin wykładów
+            /ile\sgo[a-z]+\swy[a-zżźćńółęąś]+ad[a-zżźćńółęąś]+/i,
+            /ile\sjest\sgo[a-z]+\swy[a-zżźćńółęąś]+ad[a-zżźćńółęąś]+/i,
+            /ile\swy[a-zżźćńółęąś]+ad[a-zżźćńółęąś]+/i,
+            /ile\sjest\swy[a-zżźćńółęąś]+ad[a-zżźćńółęąś]+/i
+        ];              
+        var exPattern = [                                               // Ile godzin ćwiczeń
+            /ile\sgo[a-z]+\s[cć]w[a-z]+e[a-zżźćńółęąś]*/i,
+            /ile\s[cć]w[a-z]+e[a-zżźćńółęąś]*/i,
+            /ile\sjest\s[cć]w[a-z]+e[a-zżźćńółęąś]*/i,
+            /ile\sjest\sgo[a-z]+\s[cć]w[a-z]+e[a-zżźćńółęąś]*/i
+        ];                         
 
         return {
             react: function (query) {
@@ -61,7 +87,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                 }
 
                 /** Pytanie o prowadzacego **/
-                if (whoPattern.test(query)) {
+                if (whoPattern[0].test(query) || whoPattern[1].test(query)) {
                     /** Przedmioty */
                     if (subPattern.test(query)) {
                         var groups = subPattern.exec(query);
@@ -94,7 +120,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                     }
                 }
                 /** Pytanie o punkty ECTS **/
-                else if (ectsPattern.test(query)) {
+                else if (ectsPattern[0].test(query) || ectsPattern[1].test(query) || ectsPattern[2].test(query) || ectsPattern[3].test(query)) {
                     /** Przedmioty */
                     if (subPattern.test(query)) {
                         var groups = subPattern.exec(query);
@@ -128,14 +154,13 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                     }
                 }
                 /** Pytanie o liczbę egzaminów **/
-                else if (examsNumberPattern.test(query)) {
+                else if (examsNumberPattern[0].test(query) || examsNumberPattern[1].test(query)) {
                     /** Semestr */
                     if (semesterPattern.test(query)) {
                         var groups = semesterPattern.exec(query);
                         var number = groups[1].toLowerCase();
                         var exams = 0
 
-                        // TODO: obsluga pytania o liczbe egzaminow na semestrze "number"
                         $scope.subjects.map(function (el) {
                             if (el.semesterNumber == number && el.isExam == true) {
                                 exams++;
@@ -180,7 +205,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                     }
                 }
                 /** Pytanie o liczbę godzin laboratorium z danego przedmiotu **/
-                else if (labsPattern.test(query)) {
+                else if (labsPattern[0].test(query) || labsPattern[1].test(query) || labsPattern[2].test(query) || labsPattern[3].test(query)) {
                     /** Przedmioty */
                     if (subPattern.test(query)) {
                         var groups = subPattern.exec(query);
@@ -214,7 +239,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                     }
                 }
                 /** Pytanie o liczbe godzin wykladow **/
-                else if (lecPattern.test(query)) {
+                else if (lecPattern[0].test(query) || lecPattern[1].test(query) || lecPattern[2].test(query) || lecPattern[3].test(query)) {
                     /** Przedmioty */
                     if (subPattern.test(query)) {
                         var groups = subPattern.exec(query);
@@ -248,7 +273,7 @@ app.controller('chatbotCtrl', function ($scope, $http) {
                     }
                 }
                 /** Pytanie o cwiczenia z danego przedmiotu **/
-                else if (exPattern.test(query)) {
+                else if (exPattern[0].test(query) || exPattern[1].test(query) || exPattern[2].test(query) || exPattern[3].test(query)) {
                     /** Przedmioty */
                     if (subPattern.test(query)) {
                         var groups = subPattern.exec(query);
